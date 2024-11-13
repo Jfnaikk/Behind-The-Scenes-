@@ -1,0 +1,50 @@
+#include <Servo.h>
+
+const int trigPin = 8;
+const int echoPin = 9;
+const int closeDistance = 10; // Distance in cm to trigger eye opening
+
+long duration;
+int distance;
+Servo eyeServo;
+
+void setup() {
+  Serial.begin(9600); // Start serial communication
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  // Initialize the servo motor (change the pin number if needed)
+  eyeServo.attach(10);  // The servo signal is connected to pin 10
+  eyeServo.write(0);  // Start with the eye closed (servo position at 0 degrees)
+}
+
+void loop() {
+  // Trigger the ultrasonic sensor
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Read the echo from the sensor
+  duration = pulseIn(echoPin, HIGH);
+
+  // Calculate distance based on the pulse duration
+  distance = duration * 0.034 / 2;
+
+  // Print the distance to the serial monitor (for debugging)
+  Serial.println(distance);
+
+  // Check if the object is close
+  if (distance < closeDistance) {
+    // Object detected - open the eye
+    eyeServo.write(90);  // Open the eye (servo position at 90 degrees)
+    Serial.println(1);   // Send '1' to Processing to indicate object is detected
+  } else {
+    // No object detected - close the eye
+    eyeServo.write(0);   // Close the eye (servo position at 0 degrees)
+    Serial.println(0);   // Send '0' to Processing to indicate no object
+  }
+
+  delay(100); // Delay before the next reading
+}
