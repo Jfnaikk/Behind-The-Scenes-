@@ -1,0 +1,86 @@
+import processing.serial.*;  // Import the serial library
+
+Serial arduinoPort;
+boolean objectDetected = false;
+
+int cols, rows;
+float cellSize = 30;
+String[][] binaryGrid;
+float chaosFactor = 0;
+
+void setup() {
+  size(800, 600);
+  cols = int(width / cellSize);
+  rows = int(height / cellSize);
+  binaryGrid = new String[cols][rows];
+  
+  // Initialize the grid with "1"s and "0"s
+  for (int i = 0; i < cols; i++) {
+    for (int j = 0; j < rows; j++) {
+      binaryGrid[i][j] = random(1) < 0.5 ? "1" : "0";
+    }
+  }
+
+  // Set up serial communication (check the serial port)
+  String portName = Serial.list()[0]; // Adjust this if needed
+  arduinoPort = new Serial(this, portName, 9600);
+  arduinoPort.bufferUntil('\n');  // Read until new line
+}
+
+void draw() {
+  background(0);
+  
+  // Update chaos factor based on object detection
+  if (objectDetected) {
+    chaosFactor = lerp(chaosFactor, 10, 0.1); // Increase chaos when object is detected
+  } else {
+    chaosFactor = lerp(chaosFactor, 0, 0.1);  // Reset to normal when object is far
+  }
+
+  // Draw the grid with "1"s and "0"s
+  textSize(16);
+  textAlign(CENTER, CENTER);
+  
+  for (int i = 0; i < cols; i++) {
+    for (int j = 0; j < rows; j++) {
+      float xOffset = random(-chaosFactor, chaosFactor);
+      float yOffset = random(-chaosFactor, chaosFactor);
+
+      // Normal size when no object is detected
+      float dynamicSize = 20;
+
+      // Make the numbers pop with a bright color when object is detected
+      if (objectDetected) {
+        fill(random(100, 255), random(200, 255), 0);  // Bright yellow-green when object is detected
+      } else {
+        fill(0, 255, 0);  // Standard green when no object detected
+      }
+
+      pushMatrix();
+      translate(i * cellSize + cellSize / 2, j * cellSize + cellSize / 2);
+      if (objectDetected) {
+        translate(xOffset, yOffset); // Move the numbers only when object is detected
+      }
+
+      // Display the binary value with normal size when object is far
+      textSize(dynamicSize);
+      text(binaryGrid[i][j], 0, 0);
+      
+      // Occasionally change "1" and "0" during chaos
+      if (random(1) < 0.05 * chaosFactor) {
+        binaryGrid[i][j] = binaryGrid[i][j].equals("1") ? "0" : "1";
+      }
+
+      popMatrix();
+    }
+  }
+}
+
+// Handle serial data from Arduino
+void serialEvent(Serial port) {
+  String data = port.readStringUntil('\n');
+  if (data != null) {
+    data = trim(data);  // Clean up any extra spaces or newlines
+    objectDetected = data.equals("1");  // Assuming '1' means detected
+  }
+}
