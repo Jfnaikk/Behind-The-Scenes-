@@ -1,0 +1,66 @@
+#include <Servo.h>
+
+// Pin definitions
+const int trigPin = 2;  // Trigger pin of ultrasonic sensor
+const int echoPin = 3;  // Echo pin of ultrasonic sensor
+const int servoPin = 9; // Servo control pin
+
+Servo eyelidServo; // Create a servo object
+
+// Distance thresholds (in cm)
+const int openThreshold = 20;  // Distance to open the eyelid
+const int closeThreshold = 30; // Distance to fully close the eyelid
+
+void setup() {
+  // Initialize the serial monitor
+  Serial.begin(9600);
+
+  // Configure pins
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  // Attach the servo to the pin
+  eyelidServo.attach(servoPin);
+
+  // Set the initial position of the eyelid (closed)
+  eyelidServo.write(0);
+}
+
+void loop() {
+  // Get the distance reading from the ultrasonic sensor
+  float distance = getDistance();
+
+  // Determine eyelid state
+  if (distance < openThreshold) {
+    eyelidServo.write(90); // Fully open the eyelid
+    Serial.println("1");   // Send '1' to Processing
+  } else if (distance < closeThreshold) {
+    int angle = map(distance, openThreshold, closeThreshold, 90, 0);
+    eyelidServo.write(angle);
+    Serial.println("0");   // Send '0' to Processing
+  } else {
+    eyelidServo.write(0); // Fully close the eyelid
+    Serial.println("0");   // Send '0' to Processing
+  }
+
+  // Add a short delay to stabilize readings
+  delay(100);
+}
+
+// Function to measure distance using the ultrasonic sensor
+float getDistance() {
+  // Send a 10-microsecond pulse to the trigger pin
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Measure the duration of the pulse from the echo pin
+  long duration = pulseIn(echoPin, HIGH);
+
+  // Convert duration to distance in cm
+  float distance = (duration * 0.034) / 2;
+
+  return distance;
+}
