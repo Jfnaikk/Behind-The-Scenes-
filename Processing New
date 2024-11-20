@@ -1,0 +1,85 @@
+import processing.serial.*;
+
+Serial myPort; // Serial port object
+boolean isEyeOpen = false; // Eye state
+float speedFactor = 1.0;   // Speed multiplier for visualization
+ArrayList<Signal> signals = new ArrayList<Signal>(); // List of signal particles
+
+void setup() {
+  size(800, 600);
+  background(0);
+
+  // Initialize serial communication
+  String portName = "/dev/cu.usbmodem1101"; // Adjust this to your port
+  myPort = new Serial(this, portName, 9600);
+  
+  noStroke();
+
+  // Initialize particles
+  for (int i = 0; i < 100; i++) {
+    signals.add(new Signal(random(width), random(height)));
+  }
+}
+
+void draw() {
+  // Draw background with slight transparency for motion trails
+  fill(0, 25);
+  rect(0, 0, width, height);
+
+  // Update and display each signal particle
+  for (Signal s : signals) {
+    s.update();
+    s.display();
+  }
+}
+
+// Signal particle class
+class Signal {
+  float x, y;
+  float size;
+  float speedX, speedY;
+
+  Signal(float startX, float startY) {
+    x = startX;
+    y = startY;
+    size = random(5, 15);
+    resetSpeed();
+  }
+
+  void resetSpeed() {
+    speedX = random(1, 5) * speedFactor;
+    speedY = random(1, 5) * speedFactor;
+  }
+
+  void update() {
+    // Adjust speed dynamically based on state
+    resetSpeed();
+
+    x += speedX;
+    y += speedY;
+
+    // Wraparound for screen edges
+    if (x > width) x = 0;
+    if (y > height) y = 0;
+  }
+
+  void display() {
+    fill(lerpColor(color(0, 255, 0), color(255, 0, 0), random(1.0)));
+    ellipse(x, y, size, size);
+  }
+}
+
+// Listen to serial data
+void serialEvent(Serial myPort) {
+  String inString = myPort.readStringUntil('\n'); // Read incoming data
+  if (inString != null) {
+    inString = trim(inString);
+    if (inString.equals("1")) {
+      isEyeOpen = true;
+      speedFactor = 10.0; // Make particles super fast
+    } else if (inString.equals("0")) {
+      isEyeOpen = false;
+      speedFactor = 1.0; // Slow particles down
+    }
+  }
+}
